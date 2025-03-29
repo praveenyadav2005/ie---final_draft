@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import nacl from 'tweetnacl';
@@ -22,15 +23,20 @@ const PassphraseEntry = () => {
   } = useAppContext();
   const navigate = useNavigate();
   
+  // Function to truncate wallet address
+  const truncateAddress = (address) => {
+    if (!address) return '';
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
   useEffect(() => {
-    // Check if user is new by checking if they have an encrypted private key
     if (account) {
       const encryptedPrivateKey = retrieveEncryptedPrivateKey(account);
       setIsNewUser(!encryptedPrivateKey);
     }
   }, [account, retrieveEncryptedPrivateKey]);
 
-  const handleSubmit = async (e) => { // Mark the function as async
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
@@ -46,7 +52,7 @@ const PassphraseEntry = () => {
         setPrivateKey(keyPair.privateKey);
         setPublicKey(keyPair.publicKey);
         
-        await setUserPublicKey(keyPair.publicKey); // Await the async function
+        await setUserPublicKey(keyPair.publicKey);
         navigate('/dashboard');
       } else {
         // Existing user flow - decrypt existing key
@@ -74,43 +80,74 @@ const PassphraseEntry = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-      <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+    <div 
+      className="min-h-screen w-full m-0 p-0 box-border bg-cover bg-center relative flex items-center justify-center"
+      style={{ backgroundImage: "url('/bg.jpg')" }}
+    >
+      {/* Overlay for better readability */}
+      <div className="absolute w-full h-full inset-0 bg-black opacity-30"></div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10 w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-8"
+      >
+        {/* New Account Display Section */}
+        <div className="mb-6 text-center">
+          <div className="inline-flex items-center justify-center bg-gray-700 rounded-full px-4 py-2">
+            <span className="text-sm text-gray-300 mr-2">Connected Account:</span>
+            <span className="font-bold text-white bg-blue-600 rounded-full px-3 py-1">
+              {truncateAddress(account)}
+            </span>
+          </div>
+        </div>
+
+        <h2 className="text-3xl font-bold mb-6 text-center text-white">
           {isNewUser ? 'Create Your Passphrase' : 'Enter Your Passphrase'}
         </h2>
     
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-4 p-3 bg-red-600 text-white rounded-md text-sm"
+          >
             {error}
-          </div>
+          </motion.div>
         )}
     
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
             <input
               type="password"
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder={isNewUser ? "Create your passphrase" : "Enter your existing passphrase"}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-black text-white placeholder-gray-400"
+              className="w-full px-4 py-3 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 text-white placeholder-gray-500"
               minLength={8}
             />
             {isNewUser && (
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-2 text-sm text-gray-400">
                 Create a strong passphrase that you'll remember. This will be used to encrypt your private key.
               </p>
             )}
-          </div>
-          <button
+          </motion.div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             {isNewUser ? 'Create Passphrase' : 'Enter Passphrase'}
-          </button>
+          </motion.button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 };

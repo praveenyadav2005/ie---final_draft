@@ -125,26 +125,59 @@ function SharedDashboard() {
     }
   };
 
+  // const handleViewFiles = async () => {
+  //   try {
+  //     // If there are no existing shared files, fetch them first
+  //     if (!sharedFiles || sharedFiles.length === 0) {
+  //       await getSharedFiles();
+  //       // If still no files after fetching
+  //       if (!sharedFiles || sharedFiles.length === 0) {
+  //         setError("No shared files available.");
+  //         return;
+  //       }
+  //     }
+      
+  //     if (searchType === "All") {
+  //       // For "All" type, you might want to refresh the files anyway
+  //       await getSharedFiles();
+  //       console.log(sharedFiles);
+  //       setFilteredFiles(sharedFiles);
+  //       return;
+  //     }
+      
+  //     if (searchType === "name") {
+  //       const result = sharedFiles.filter((file) =>
+  //         file.name.toLowerCase().includes(inputValue.toLowerCase())
+  //       );
+  //       setFilteredFiles(result);
+  //     } else {
+  //       const result = await getSharedFilesBySender(inputValue);
+  //       setFilteredFiles(result);
+  //     }
+  //   } catch (error) {
+  //     setError("Error fetching or filtering files: " + error.message);
+  //   }
+  // };
   const handleViewFiles = async () => {
     try {
-      // If there are no existing shared files, fetch them first
+      setError(""); // Clear previous errors immediately
+  
       if (!sharedFiles || sharedFiles.length === 0) {
         await getSharedFiles();
-        // If still no files after fetching
         if (!sharedFiles || sharedFiles.length === 0) {
-          setError("No shared files available.");
+          setTimeout(() => {
+            setError("No shared files available.");
+          }, 3000); // Delay the error message by 3 seconds
           return;
         }
       }
-      
+  
       if (searchType === "All") {
-        // For "All" type, you might want to refresh the files anyway
         await getSharedFiles();
-        console.log(sharedFiles);
         setFilteredFiles(sharedFiles);
         return;
       }
-      
+  
       if (searchType === "name") {
         const result = sharedFiles.filter((file) =>
           file.name.toLowerCase().includes(inputValue.toLowerCase())
@@ -155,9 +188,12 @@ function SharedDashboard() {
         setFilteredFiles(result);
       }
     } catch (error) {
-      setError("Error fetching or filtering files: " + error.message);
+      setTimeout(() => {
+        setError("Error fetching or filtering files: " + error.message);
+      }, 3000);
     }
   };
+  
 
   const handleClearSearch = () => {
     setInputValue("");
@@ -216,8 +252,8 @@ function SharedDashboard() {
                     <span className="text-gray-400">No Preview</span>
                   </div>
                 )}
-                <h3 className="text-lg font-bold truncate mt-2 text-white">{file.name}</h3>
-                <p className="text-sm text-white">File size: {(Number(file.size) / 1024).toFixed(2)} KB</p>
+                <h3 className="text-lg font-bold truncate mt-2 text-white">{file.fileName}</h3>
+                <p className="text-sm text-white">File size: {(Number(file.fileSize) / 1024).toFixed(2)} KB</p>
                 <p className="text-sm text-white">Last: {new Date(Number(file.lastModified)).toLocaleString()}</p>
               </motion.div>
             ))

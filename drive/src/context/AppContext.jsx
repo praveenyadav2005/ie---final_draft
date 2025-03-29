@@ -500,6 +500,7 @@ const retrieveEncryptedPrivateKey = (account) => {
 
   // Revoke access to a shared file
   const revokeAccess = async (cid, recipient) => {
+    console.log("in App");
     try {
       await contract.methods.revokeAccess(cid, recipient).send({ from: account });
       alert("Access revoked successfully!");

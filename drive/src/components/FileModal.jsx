@@ -1,7 +1,8 @@
+// src/components/FileModal.jsx
 import React, { useState } from "react";
 import { ImCross } from "react-icons/im";
 
-function FileModal({ file, onClose, onDownload, onDelete, onShare }) {
+function FileModal({ file, onClose, onDownload, onDelete, onShare, onRevoke }) {
   const [isSharing, setIsSharing] = useState(false);
   const [recipientAddress, setRecipientAddress] = useState("");
 
@@ -11,115 +12,119 @@ function FileModal({ file, onClose, onDownload, onDelete, onShare }) {
   const isPDF = file.fileType === "application/pdf";
   const isHTML = file.fileType === "text/html";
   const isText = file.fileType.startsWith("text/");
-  const isWord = file.fileType === "application/msword" || 
-                 file.fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-  const isExcel = file.fileType === "application/vnd.ms-excel" || 
-                  file.fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-  const fileUrl = `https://ipfs.io/ipfs/${file.cid}`;
+  const isWord =
+    file.fileType === "application/msword" ||
+    file.fileType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  const isExcel =
+    file.fileType === "application/vnd.ms-excel" ||
+    file.fileType ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-      <div className="bg-gray-900 p-6 mb-4 rounded-lg shadow-lg max-w-md w-full">
-        <div className="max-w-full flex items-center justify-between p-2">
-          <h3 className="text-2xl text-wrap font-bold break-words">{file.name}</h3>
-          <button onClick={onClose} className="p-2 text-red-500 hover:text-red-700">
-            <ImCross size={24} />  
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+      <div className="bg-gray-900 p-6 mb-4 rounded-lg shadow-lg max-w-md w-full relative">
+        {/* Header */}
+        <div className="flex items-center justify-between p-2 border-b border-gray-700">
+          <h3 className="text-xl font-bold text-white break-words">
+            {file.name}
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-200 transition"
+          >
+            <ImCross size={20} />
           </button>
         </div>
 
-        {/* File Preview */}
-        {isImage && (
-          <div className="w-full p-6 flex items-center justify-center">
-            <p>File is encrypted. Please download to view.</p>
-          </div>
-        )}
-        {isVideo && (
-          <div className="w-full p-6 flex items-center justify-center">
-            <p>File is encrypted. Please download to view.</p>
-          </div>
-        )}
-        {isAudio && (
-          <div className="w-full p-6 flex items-center justify-center">
-            <p>File is encrypted. Please download to view.</p>
-          </div>
-        )}
-        {isPDF && (
-          <div className="w-full p-6 flex items-center justify-center">
-            <p>File is encrypted. Please download to view.</p>
-          </div>
-        )}
-        {isText && (
-          <div className="w-full p-6 flex items-center justify-center">
-            <p>File is encrypted. Please download to view.</p>
-          </div>
-        )}
-        {isWord && (
-          <div className="w-full p-6 flex items-center justify-center">
-            <p>File is encrypted. Please download to view.</p>
-          </div>
-        )}
-        {isExcel && (
-          <div className="w-full p-6 flex items-center justify-center">
-            <p>File is encrypted. Please download to view.</p>
-          </div>
-        )}
-        {isHTML && (
-          <div className="w-full p-6 flex items-center justify-center">
-            <p>For security reasons, we cannot display or download HTML files.</p>
-          </div>
-        )}
-        {!isImage && !isVideo && !isAudio && !isPDF && !isText && !isWord && !isExcel && !isHTML && (
-          <div className="w-full p-6 flex items-center justify-center">
-            <p>Unsupported file type. Please download the file from IPFS to view it.</p>
-          </div>
-        )}
+        {/* Preview Section */}
+        <div className="py-4">
+          {(isImage || isVideo || isAudio || isPDF || isText || isWord || isExcel) && (
+            <p className="text-gray-300">
+              File is encrypted. Please download to view.
+            </p>
+          )}
+          {isHTML && (
+            <p className="text-gray-300">
+              For security reasons, we cannot display or download HTML files.
+            </p>
+          )}
+          {!isImage &&
+            !isVideo &&
+            !isAudio &&
+            !isPDF &&
+            !isText &&
+            !isWord &&
+            !isExcel &&
+            !isHTML && (
+              <p className="text-gray-300">
+                Unsupported file type. Please download to view.
+              </p>
+            )}
+        </div>
 
-        {/* Buttons */}
-        <div className="mt-8 flex gap-6 items-center justify-center">
+        {/* Main Action Buttons */}
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between">
           <button
-            onClick={onDownload} 
-            className="w-full px-3 py-1.5 bg-blue-500 hover:bg-blue-600 transition-all rounded-lg shadow-lg text-lg font-semibold hover:scale-102"
+            onClick={onDownload}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition w-full sm:w-auto"
           >
             Download
           </button>
+
           <button
             onClick={() => setIsSharing(!isSharing)}
-            className="w-full px-3 py-1.5 bg-blue-500 hover:bg-blue-600 transition-all rounded-lg shadow-lg text-lg font-semibold hover:scale-102"
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition w-full sm:w-auto"
           >
-            {isSharing ? "Cancel" : "Share"}
+            {isSharing ? "Cancel" : "Share/Revoke"}
           </button>
-          {isSharing && (
-            <div className="mt-2">
-              <input
-                type="text"
-                placeholder="Enter recipient address"
-                value={recipientAddress}
-                onChange={(e) => setRecipientAddress(e.target.value)}
-                className="w-full px-3 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+
+          <button
+            onClick={async () => {
+              await onDelete(file.cid);
+              onClose();
+            }}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition w-full sm:w-auto"
+          >
+            Delete
+          </button>
+        </div>
+
+        {/* Sharing Form */}
+        {isSharing && (
+          <div className="mt-4 bg-gray-800 p-4 rounded-lg">
+            <input
+              type="text"
+              placeholder="Enter recipient address"
+              value={recipientAddress}
+              onChange={(e) => setRecipientAddress(e.target.value)}
+              className="w-full px-3 py-2 mb-2 border border-gray-700 rounded-lg bg-gray-900 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={() => {
                   onShare(file.cid, file.fileName, file.fileType, recipientAddress);
                   setIsSharing(false);
                   setRecipientAddress("");
                 }}
-                className="w-full px-3 py-1.5 bg-blue-500 hover:bg-blue-600 transition-all rounded-lg shadow-lg text-lg font-semibold hover:scale-102 mt-2"
+                className="w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold transition"
               >
                 Confirm Share
               </button>
+              <button
+                onClick={async () => {
+                  await onRevoke(file.cid, recipientAddress);
+                  setIsSharing(false);
+                  setRecipientAddress("");
+                }}
+                className="w-full px-3 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-white font-semibold transition"
+                disabled={!recipientAddress.trim()}
+              >
+                Revoke Access
+              </button>
             </div>
-          )}
-          <button
-            onClick={async () => {
-              await onDelete(file.cid);
-              onClose();
-            }}
-            className="w-full px-3 py-1.5 bg-blue-500 hover:bg-blue-600 transition-all rounded-lg shadow-lg text-lg font-semibold hover:scale-102"
-          >
-            Delete
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

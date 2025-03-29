@@ -6,6 +6,7 @@ contract SecureUpload {
         string cid;
         string fileName;
         string fileType;
+        uint256 fileSize;
         uint256 timestamp;
         bool exists;
     }
@@ -66,11 +67,12 @@ contract SecureUpload {
         return fileAESKeys[cid];
     }
     
-   function addFile(string memory _cid, string memory _fileName, string memory _fileType, string memory encryptedAESKey) public {
+   function addFile(string memory _cid, string memory _fileName, string memory _fileType,uint256 _fileSize, string memory encryptedAESKey) public {
         FileMetadata memory newFile = FileMetadata({
             cid: _cid,
             fileName: _fileName,
             fileType: _fileType,
+            fileSize: _fileSize,
             timestamp: block.timestamp,
             exists: true
         });
@@ -102,7 +104,7 @@ contract SecureUpload {
         emit FileDeleted(msg.sender, cid);
     }
     
-    function shareFile(string memory cid, string memory _fileName, string memory _fileType, address recipient, string memory encryptedAESKey) public onlyOwner(cid) {
+    function shareFile(string memory cid, string memory _fileName, string memory _fileType,uint256 _fileSize, address recipient, string memory encryptedAESKey) public onlyOwner(cid) {
         fileAccess[cid][recipient] = true;
 
         uint256 shareId = shareIdCounter++;
@@ -111,6 +113,7 @@ contract SecureUpload {
             cid: cid,
             fileName: _fileName,
             fileType: _fileType,
+            fileSize: _fileSize,
             timestamp: block.timestamp,
             exists: true
         });

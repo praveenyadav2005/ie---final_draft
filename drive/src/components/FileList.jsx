@@ -9,7 +9,7 @@ import { Buffer } from "buffer";
 
 function FileList({ files }) {
   const [selectedFile, setSelectedFile] = useState(null);
-  const { deleteFileFromContract, shareFile, publicKey, privateKey, account,  getEncryptedAESKey } = useAppContext(); // Ensure account is available
+  const { deleteFileFromContract, shareFile, publicKey, privateKey, account,revokeAccess,  getEncryptedAESKey } = useAppContext(); // Ensure account is available
   const [searchQuery, setSearchQuery] = useState('');
   const [showProgress, setShowProgress] = useState(false);
   const ipfsGateway = 'https://gateway.pinata.cloud/ipfs/';
@@ -25,6 +25,7 @@ function FileList({ files }) {
     (file?.fileName || "").toLowerCase().includes(searchQuery.toLowerCase()) // Ensure fileName exists
   );
   console.log("Filtered Files:", filteredFiles);
+  
 
   const handleFileClick = (file) => {
     setSelectedFile(file);
@@ -41,6 +42,12 @@ function FileList({ files }) {
   const handleShareFile = (cid, fileName, fileType, address) => {
     shareFile(cid, fileName, fileType, address);
   };
+
+  const handleRevokeFile = (cid,address) =>{
+    console.log("enter");
+    revokeAccess(cid,address);
+    console.log("exit");
+  }
 
   const handleDownloadFile = async () => {
     if (!selectedFile) return;
@@ -159,6 +166,7 @@ function FileList({ files }) {
               onClick={() => handleFileClick(file)}
               className="p-4 bg-gray-800 hover:bg-gray-700 duration-150 rounded-lg shadow-md cursor-pointer"
             >
+              {console.log("File Object:", file)}
               {file.fileType.startsWith('image/') ? (
                 <img
                   src={`${ipfsGateway}${file.cid}`}
@@ -189,6 +197,7 @@ function FileList({ files }) {
           onDownload={handleDownloadFile}
           onDelete={handleDeleteFile}
           onShare={handleShareFile}
+          onRevoke={handleRevokeFile}
         />
       )}
     </div>
