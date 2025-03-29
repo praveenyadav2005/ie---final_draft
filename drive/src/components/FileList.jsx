@@ -145,17 +145,6 @@ function FileList({ files }) {
 
   return (
     <div className="mt-8 w-full flex flex-col items-center justify-center">
-      {/* Search Input */}
-      <div className="w-full p-2">
-        <input
-          type="text"
-          placeholder="Search by file name"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-3 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
       {/* File List */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-4">
         {filteredFiles.length > 0 ? (

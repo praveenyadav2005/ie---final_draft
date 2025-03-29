@@ -210,7 +210,7 @@ function SharedDashboard() {
           onChange={(e) => setSearchType(e.target.value)}
           className="p-2 rounded-lg border border-gray-700 bg-gray-800 text-white"
         >
-          <option value="name">Search by Name</option>
+          {/* <option value="name">Search by Name</option> */}
           <option value="sender">Search by Sender</option>
           <option value="All">All files</option>
         </select>
@@ -241,6 +241,7 @@ function SharedDashboard() {
                 onClick={() => handleFileClick(file)}
                 className="p-4 bg-gray-800 hover:bg-gray-700 duration-150 rounded-lg shadow-md cursor-pointer"
               >
+                {console.log(file)}
                 {file.fileType.startsWith("image/") ? (
                   <img
                     src={`${ipfsGateway}${file.cid}`}
@@ -254,10 +255,10 @@ function SharedDashboard() {
                 )}
                 <h3 className="text-lg font-bold truncate mt-2 text-white">{file.fileName}</h3>
                 <p className="text-sm text-white">File size: {(Number(file.fileSize) / 1024).toFixed(2)} KB</p>
-                <p className="text-sm text-white">Last: {new Date(Number(file.lastModified)).toLocaleString()}</p>
+                
               </motion.div>
             ))
-          ) : (
+          ) : ( 
             <p className="text-white mt-4">No files found for this address.</p>
           )}
         </div>
