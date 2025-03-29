@@ -103,7 +103,7 @@ function FileModal({ file, onClose, onDownload, onDelete, onShare, onRevoke }) {
             <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={() => {
-                  onShare(file.cid, file.fileName, file.fileType, recipientAddress);
+                  onShare(file.cid, file.fileName, file.fileType,file.fileSize, recipientAddress);
                   setIsSharing(false);
                   setRecipientAddress("");
                 }}

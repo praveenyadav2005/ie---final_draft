@@ -412,6 +412,7 @@ const retrieveEncryptedPrivateKey = (account) => {
                     fileCID, 
                     file.name, 
                     file.type, 
+                    file.size,
                     Buffer.from(combinedEncryptedKey).toString("hex")
                 )
                 .send({ 
@@ -435,8 +436,11 @@ const retrieveEncryptedPrivateKey = (account) => {
   
 
   // Share a file with another user
-  const shareFile = async (cid, fileName, fileType, recipientAddress) => {
-    if (!cid || !fileName || !fileType || !recipientAddress) {
+  const shareFile = async (cid, fileName, fileType,fileSize, recipientAddress) => {
+    if (!cid || !fileName || !fileType||!fileSize ||!recipientAddress) {
+      console.log(recipientAddress);
+      console.log(cid);
+      console.log(fileSize);
       alert("Invalid input!");
       return;
     }
@@ -485,6 +489,7 @@ const retrieveEncryptedPrivateKey = (account) => {
                     cid, 
                     fileName, 
                     fileType, 
+                    fileSize,
                     recipientAddress, 
                     "0x" + Buffer.from(combinedReEncryptedKey).toString("hex")
                 ) .send({ 

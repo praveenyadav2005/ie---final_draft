@@ -1,5 +1,5 @@
 {
-  "address": "0xfB7CdC760816E1d49C46261d2C1D1d597e2bC1a5",
+  "address": "0x1D44941df0C61800Ed1301Ef3fF560571E45ab66",
   "abi": [
     {
       "anonymous": false,
@@ -150,6 +150,11 @@
           "type": "string"
         },
         {
+          "internalType": "uint256",
+          "name": "_fileSize",
+          "type": "uint256"
+        },
+        {
           "internalType": "string",
           "name": "encryptedAESKey",
           "type": "string"
@@ -255,6 +260,11 @@
               "internalType": "string",
               "name": "fileType",
               "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "fileSize",
+              "type": "uint256"
             },
             {
               "internalType": "uint256",
@@ -480,6 +490,11 @@
           "internalType": "string",
           "name": "_fileType",
           "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_fileSize",
+          "type": "uint256"
         },
         {
           "internalType": "address",

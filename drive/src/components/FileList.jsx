@@ -39,8 +39,9 @@ function FileList({ files }) {
     deleteFileFromContract(cid);
   };
 
-  const handleShareFile = (cid, fileName, fileType, address) => {
-    shareFile(cid, fileName, fileType, address);
+  const handleShareFile = (cid, fileName, fileType, fileSize,address) => {
+    shareFile(cid, fileName, fileType,fileSize, address);
+    console.log("fs"+fileSize);
   };
 
   const handleRevokeFile = (cid,address) =>{
@@ -180,7 +181,7 @@ function FileList({ files }) {
               )}
 
               <h3 className="text-lg font-bold truncate mt-2">{file.fileName}</h3>
-              <p className="text-sm">File size: {(Number(file.size) / 1024).toFixed(2)} KB</p>
+              <p className="text-sm">File size: {(Number(file.fileSize) / 1024).toFixed(2)} KB</p>
               <p className="text-sm">Last: {new Date(Number(file.lastModified)).toLocaleString()}</p>
             </motion.div>
           ))
