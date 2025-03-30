@@ -6,13 +6,51 @@ import CryptoJS from "crypto-js";
 import nacl from "tweetnacl";
 import { ethers } from "ethers";
 import { Buffer } from "buffer";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function FileList({ files }) {
   const [selectedFile, setSelectedFile] = useState(null);
-  const { deleteFileFromContract, shareFile, publicKey, privateKey, account,revokeAccess,  getEncryptedAESKey } = useAppContext(); // Ensure account is available
+  const { deleteFileFromContract, shareFile, publicKey, privateKey, account, revokeAccess, getEncryptedAESKey, getSharedFiles } = useAppContext();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showProgress, setShowProgress] = useState(false);
-  const ipfsGateway = 'https://gateway.pinata.cloud/ipfs/';
+  const [loading, setLoading] = useState({
+    delete: false,
+    download: false,
+    share: false,
+    revoke: false
+  });
+
+  // List of IPFS gateways to try
+  const ipfsGateways = [
+    'https://gateway.pinata.cloud/ipfs/',
+    'https://ipfs.io/ipfs/',
+    'https://cloudflare-ipfs.com/ipfs/',
+    'https://gateway.ipfs.io/ipfs/',
+    'https://ipfs.filebase.io/ipfs/'
+  ];
+
+  // Function to try different gateways
+  const fetchFromIPFS = async (cid) => {
+    for (const gateway of ipfsGateways) {
+      try {
+        const response = await fetch(`${gateway}${cid}`, {
+          method: 'GET',
+          mode: 'cors',
+          headers: {
+            'Accept': 'application/octet-stream'
+          }
+        });
+        
+        if (response.ok) {
+          return response;
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch from ${gateway}:`, error);
+        continue;
+      }
+    }
+    throw new Error("Failed to fetch file from all available IPFS gateways");
+  };
 
   useEffect(() => {
     console.log("Updated Files:", files);
@@ -22,10 +60,8 @@ function FileList({ files }) {
   }, [files]);
 
   const filteredFiles = (files || []).filter((file) =>
-    (file?.fileName || "").toLowerCase().includes(searchQuery.toLowerCase()) // Ensure fileName exists
+    (file?.fileName || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
-  console.log("Filtered Files:", filteredFiles);
-  
 
   const handleFileClick = (file) => {
     setSelectedFile(file);
@@ -35,27 +71,71 @@ function FileList({ files }) {
     setSelectedFile(null);
   };
 
-  const handleDeleteFile = (cid) => {
-    deleteFileFromContract(cid);
+  const handleDeleteFile = async (cid) => {
+    try {
+      setLoading(prev => ({ ...prev, delete: true }));
+      const result = await deleteFileFromContract(cid);
+      
+      if (result.success) {
+        toast.success(result.message);
+        setSelectedFile(null);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred. Please try again.");
+      console.error("Error in delete handler:", error);
+    } finally {
+      setLoading(prev => ({ ...prev, delete: false }));
+    }
   };
 
-  const handleShareFile = (cid, fileName, fileType, fileSize,address) => {
-    shareFile(cid, fileName, fileType,fileSize, address);
-    console.log("fs"+fileSize);
+  const handleShareFile = async (cid, fileName, fileType, fileSize, address) => {
+    try {
+      setLoading(prev => ({ ...prev, share: true }));
+      const result = await shareFile(cid, fileName, fileType, fileSize, address);
+      
+      if (result.success) {
+        toast.success(result.message);
+        // Refresh the shared files list
+        await getSharedFiles();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to share file. Please try again.");
+      console.error("Error sharing file:", error);
+    } finally {
+      setLoading(prev => ({ ...prev, share: false }));
+    }
   };
 
-  const handleRevokeFile = (cid,address) =>{
-    console.log("enter");
-    revokeAccess(cid,address);
-    console.log("exit");
-  }
+  const handleRevokeFile = async (cid, address) => {
+    try {
+      setLoading(prev => ({ ...prev, revoke: true }));
+      const result = await revokeAccess(cid, address);
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to revoke access. Please try again.");
+      console.error("Error revoking access:", error);
+    } finally {
+      setLoading(prev => ({ ...prev, revoke: false }));
+    }
+  };
 
   const handleDownloadFile = async () => {
     if (!selectedFile) return;
 
     try {
+      setLoading(prev => ({ ...prev, download: true }));
+      
       // Fetch the encrypted AES key from the contract
-      const encryptedAESKeyHex = await  getEncryptedAESKey(selectedFile.cid);
+      const encryptedAESKeyHex = await getEncryptedAESKey(selectedFile.cid);
       
       console.log("encryptedAESKeyHex:", encryptedAESKeyHex);
 
@@ -82,7 +162,7 @@ function FileList({ files }) {
         new Uint8Array(encryptedData),
         new Uint8Array(nonce),
         publicKeyUint8Array,
-        new Uint8Array(Buffer.from(privateKey, "hex")) // Ensure privateKey is in Uint8Array
+        new Uint8Array(Buffer.from(privateKey, "hex"))
       );
       console.log("Decrypted AES Key:", decryptedAESKey);
 
@@ -90,19 +170,18 @@ function FileList({ files }) {
         throw new Error("Failed to decrypt the AES key. Ensure the keys are correct.");
       }
 
-      // Fetch the encrypted file from IPFS
-      const fileUrl = `${ipfsGateway}${selectedFile.cid}`;
-      const response = await fetch(fileUrl);
-      if (!response.ok) throw new Error("Failed to download file from IPFS.");
-
-      console.log("response", response); // Corrected logging
+      // Fetch the encrypted file from IPFS using multiple gateways
+      const response = await fetchFromIPFS(selectedFile.cid);
+      if (!response.ok) {
+        throw new Error("Failed to download file from IPFS.");
+      }
 
       const responseFileData = await response.arrayBuffer();
-      const responseData = new Uint8Array(responseFileData); // Convert to Uint8Array
+      const responseData = new Uint8Array(responseFileData);
 
       // Extract the IV and encrypted file data
-      const iv = responseData.slice(0, 12); // First 12 bytes are the IV
-      const encryptedFileData = responseData.slice(12); // Remaining bytes are the encrypted file
+      const iv = responseData.slice(0, 12);
+      const encryptedFileData = responseData.slice(12);
       console.log("IV:", iv, "Length:", iv.length);
 
       // Import the decrypted AES key
@@ -119,15 +198,16 @@ function FileList({ files }) {
         { name: "AES-GCM", iv },
         aesKey,
         encryptedFileData
-    )
+      );
+      
       // Create a Blob from the decrypted file
-      const blob = new Blob([decryptedFile], { type: selectedFile.fileType || "application/octet-stream" }); // Use selectedFile.fileType
+      const blob = new Blob([decryptedFile], { type: selectedFile.fileType || "application/octet-stream" });
       const blobUrl = URL.createObjectURL(blob);
 
       // Create and trigger download link
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = selectedFile.fileName || "download"; // Ensure a fallback name
+      link.download = selectedFile.fileName || "download";
       document.body.appendChild(link);
       link.click();
 
@@ -136,10 +216,12 @@ function FileList({ files }) {
       URL.revokeObjectURL(blobUrl);
 
       setSelectedFile(null);
-      alert("File downloaded successfully!");
+      toast.success("File downloaded successfully!");
     } catch (error) {
       console.error("Error downloading file:", error);
-      alert(`Failed to download file: ${error.message}`);
+      toast.error(error.message || "Failed to download file. Please try again.");
+    } finally {
+      setLoading(prev => ({ ...prev, download: false }));
     }
   };
 
@@ -156,12 +238,15 @@ function FileList({ files }) {
               onClick={() => handleFileClick(file)}
               className="p-4 bg-gray-800 hover:bg-gray-700 duration-150 rounded-lg shadow-md cursor-pointer"
             >
-              {console.log("File Object:", file)}
               {file.fileType.startsWith('image/') ? (
                 <img
-                  src={`${ipfsGateway}${file.cid}`}
-                  alt={file.fileName} // Use fileName for consistency
+                  src={`${ipfsGateways[0]}${file.cid}`}
+                  alt={file.fileName}
                   className="w-full h-32 object-cover rounded-md"
+                  onError={(e) => {
+                    e.target.onerror = null; // Prevent infinite loop
+                    e.target.src = `${ipfsGateways[1]}${file.cid}`; // Try next gateway
+                  }}
                 />
               ) : (
                 <div className="flex items-center justify-center h-32 bg-gray-700 rounded-md">
@@ -188,6 +273,7 @@ function FileList({ files }) {
           onDelete={handleDeleteFile}
           onShare={handleShareFile}
           onRevoke={handleRevokeFile}
+          loading={loading}
         />
       )}
     </div>

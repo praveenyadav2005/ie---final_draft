@@ -1,5 +1,5 @@
 // src/components/SharedDashboard.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
 import { ImCross } from "react-icons/im";
@@ -7,6 +7,9 @@ import ShareModal from "./ShareModal";
 import { Buffer } from "buffer";
 import nacl from "tweetnacl";
 import CryptoJS from "crypto-js";
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify';
 
 function SharedDashboard() {
   const { getSharedFiles, getSharedFilesBySender, sharedFiles, contract, account, publicKey, privateKey, getEncryptedPasskey, fetchPublicKey} = useAppContext();
@@ -31,33 +34,20 @@ function SharedDashboard() {
 
     try {
       // Fetch the encrypted AES key from the contract
-      const encryptedAESKeyHex = await  getEncryptedPasskey(selectedFile.cid, selectedFile.sharedBy);
+      const encryptedAESKeyHex = await getEncryptedPasskey(selectedFile.cid, selectedFile.sharedBy);
       
-      console.log("encryptedAESKeyHex:", encryptedAESKeyHex);
-
       const cleanHex = encryptedAESKeyHex.startsWith("0x") 
-    ? encryptedAESKeyHex.slice(2) 
-    : encryptedAESKeyHex;
-
+        ? encryptedAESKeyHex.slice(2) 
+        : encryptedAESKeyHex;
 
       const encryptedAESKeyBuffer = Buffer.from(cleanHex, "hex");
-
-      console.log("encryptedAESKeyBuffer:", encryptedAESKeyBuffer, "Length:", encryptedAESKeyBuffer.length);
-
-      console.log("nacl.box.nonceLength:", nacl.box.nonceLength);
 
       // Split into nonce and encrypted data
       const nonce = encryptedAESKeyBuffer.subarray(0, nacl.box.nonceLength);
       const encryptedData = encryptedAESKeyBuffer.subarray(nacl.box.nonceLength);
 
-      console.log("Nonce:", nonce, "Length:", nonce.length);
-      console.log("Encrypted Data:", encryptedData, "Length:", encryptedData.length);
-
       const senderPublicKey = await fetchPublicKey(selectedFile.sharedBy);
-      console.log("Public Key:", senderPublicKey);
       const senderPublicKeyUint8Array = new Uint8Array(Buffer.from(senderPublicKey, "hex"));
-      console.log("Public Key (Uint8Array):", senderPublicKeyUint8Array);
-      console.log("Private Key:", privateKey);
 
       // Decrypt the AES key using the private key
       const decryptedAESKey = nacl.box.open(
@@ -66,7 +56,6 @@ function SharedDashboard() {
         senderPublicKeyUint8Array,  // sender's public key
         new Uint8Array(Buffer.from(privateKey, "hex"))  // your private key
       );
-      console.log("Decrypted AES Key:", decryptedAESKey);
 
       if (!decryptedAESKey) {
         throw new Error("Failed to decrypt the AES key. Ensure the keys are correct.");
@@ -77,15 +66,12 @@ function SharedDashboard() {
       const response = await fetch(fileUrl);
       if (!response.ok) throw new Error("Failed to download file from IPFS.");
 
-      console.log("response", response); // Corrected logging
-
       const responseFileData = await response.arrayBuffer();
       const responseData = new Uint8Array(responseFileData); // Convert to Uint8Array
 
       // Extract the IV and encrypted file data
       const iv = responseData.slice(0, 12); // First 12 bytes are the IV
       const encryptedFileData = responseData.slice(12); // Remaining bytes are the encrypted file
-      console.log("IV:", iv, "Length:", iv.length);
 
       // Import the decrypted AES key
       const aesKey = await window.crypto.subtle.importKey(
@@ -101,15 +87,16 @@ function SharedDashboard() {
         { name: "AES-GCM", iv },
         aesKey,
         encryptedFileData
-    )
+      );
+
       // Create a Blob from the decrypted file
-      const blob = new Blob([decryptedFile], { type: selectedFile.fileType || "application/octet-stream" }); // Use selectedFile.fileType
+      const blob = new Blob([decryptedFile], { type: selectedFile.fileType || "application/octet-stream" });
       const blobUrl = URL.createObjectURL(blob);
 
       // Create and trigger download link
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = selectedFile.fileName || "download"; // Ensure a fallback name
+      link.download = selectedFile.fileName || "download";
       document.body.appendChild(link);
       link.click();
 
@@ -118,82 +105,58 @@ function SharedDashboard() {
       URL.revokeObjectURL(blobUrl);
 
       setSelectedFile(null);
-      alert("File downloaded successfully!");
+      toast.success("File downloaded successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true
+      });
     } catch (error) {
       console.error("Error downloading file:", error);
-      alert(`Failed to download file: ${error.message}`);
+      toast.error("Failed to download file: " + error.message, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true
+      });
     }
   };
 
-  // const handleViewFiles = async () => {
-  //   try {
-  //     // If there are no existing shared files, fetch them first
-  //     if (!sharedFiles || sharedFiles.length === 0) {
-  //       await getSharedFiles();
-  //       // If still no files after fetching
-  //       if (!sharedFiles || sharedFiles.length === 0) {
-  //         setError("No shared files available.");
-  //         return;
-  //       }
-  //     }
-      
-  //     if (searchType === "All") {
-  //       // For "All" type, you might want to refresh the files anyway
-  //       await getSharedFiles();
-  //       console.log(sharedFiles);
-  //       setFilteredFiles(sharedFiles);
-  //       return;
-  //     }
-      
-  //     if (searchType === "name") {
-  //       const result = sharedFiles.filter((file) =>
-  //         file.name.toLowerCase().includes(inputValue.toLowerCase())
-  //       );
-  //       setFilteredFiles(result);
-  //     } else {
-  //       const result = await getSharedFilesBySender(inputValue);
-  //       setFilteredFiles(result);
-  //     }
-  //   } catch (error) {
-  //     setError("Error fetching or filtering files: " + error.message);
-  //   }
-  // };
   const handleViewFiles = async () => {
     try {
-      setError(""); // Clear previous errors immediately
-  
-      if (!sharedFiles || sharedFiles.length === 0) {
-        await getSharedFiles();
-        if (!sharedFiles || sharedFiles.length === 0) {
-          setTimeout(() => {
-            setError("No shared files available.");
-          }, 3000); // Delay the error message by 3 seconds
-          return;
-        }
-      }
-  
+      setError(""); // Clear previous errors
+      
       if (searchType === "All") {
+        // For "All" type, refresh the files
         await getSharedFiles();
-        setFilteredFiles(sharedFiles);
+        setFilteredFiles(sharedFiles || []);
+        if (!sharedFiles || sharedFiles.length === 0) {
+          setError("No shared files available.");
+        }
         return;
       }
-  
-      if (searchType === "name") {
-        const result = sharedFiles.filter((file) =>
-          file.name.toLowerCase().includes(inputValue.toLowerCase())
-        );
-        setFilteredFiles(result);
-      } else {
-        const result = await getSharedFilesBySender(inputValue);
-        setFilteredFiles(result);
+      
+      // For sender search
+      if (!inputValue.trim()) {
+        setError("Please enter a sender address");
+        return;
+      }
+      
+      const result = await getSharedFilesBySender(inputValue);
+      setFilteredFiles(result || []);
+      
+      if (!result || result.length === 0) {
+        setError("No files found for this address.");
       }
     } catch (error) {
-      setTimeout(() => {
-        setError("Error fetching or filtering files: " + error.message);
-      }, 3000);
+      console.error("Error in handleViewFiles:", error);
+      setError("Error fetching files: " + error.message);
     }
   };
-  
 
   const handleClearSearch = () => {
     setInputValue("");
@@ -201,26 +164,63 @@ function SharedDashboard() {
     setError("");
   };
 
+  // useEffect to load all shared files on component mount and when sharedFiles changes
+  useEffect(() => {
+    const loadAllSharedFiles = async () => {
+      try {
+        if (account) {  // Only fetch if we have an account
+          await getSharedFiles();
+          setFilteredFiles(sharedFiles || []);
+          if (!sharedFiles || sharedFiles.length === 0) {
+            setError("No shared files available.");
+          }
+        }
+      } catch (error) {
+        console.error("Error loading shared files:", error);
+        setError("Error loading files: " + error.message);
+      }
+    };
+
+    loadAllSharedFiles();
+  }, [account]); // Only depend on account changes
+
   return (
     <div className="p-4 bg-gray-900 rounded-lg mt-4">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
       <h2 className="text-2xl font-bold text-white mb-4">View Shared Files</h2>
       <div className="flex gap-2 mb-4">
         <select
           value={searchType}
-          onChange={(e) => setSearchType(e.target.value)}
+          onChange={(e) => {
+            setSearchType(e.target.value);
+            setInputValue("");
+            setError("");
+          }}
           className="p-2 rounded-lg border border-gray-700 bg-gray-800 text-white"
         >
-          {/* <option value="name">Search by Name</option> */}
-          <option value="sender">Search by Sender</option>
           <option value="All">All files</option>
+          <option value="sender">Search by Sender</option>
         </select>
-        <input
-          type="text"
-          placeholder={searchType === "name" ? "Enter file name" : "Enter sender address"}
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          className="w-full p-2 rounded-lg border border-gray-700 bg-gray-800 text-white"
-        />
+        {searchType === "sender" && (
+          <input
+            type="text"
+            placeholder="Enter sender address"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            className="w-full p-2 rounded-lg border border-gray-700 bg-gray-800 text-white"
+          />
+        )}
         <button
           onClick={handleViewFiles}
           className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
@@ -241,7 +241,6 @@ function SharedDashboard() {
                 onClick={() => handleFileClick(file)}
                 className="p-4 bg-gray-800 hover:bg-gray-700 duration-150 rounded-lg shadow-md cursor-pointer"
               >
-                {console.log(file)}
                 {file.fileType.startsWith("image/") ? (
                   <img
                     src={`${ipfsGateway}${file.cid}`}
@@ -255,7 +254,6 @@ function SharedDashboard() {
                 )}
                 <h3 className="text-lg font-bold truncate mt-2 text-white">{file.fileName}</h3>
                 <p className="text-sm text-white">File size: {(Number(file.fileSize) / 1024).toFixed(2)} KB</p>
-                
               </motion.div>
             ))
           ) : ( 

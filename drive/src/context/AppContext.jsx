@@ -1,4 +1,4 @@
- import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
+import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
 import axios from "axios";
 import Web3 from "web3";
 import { SiweMessage } from "siwe";
@@ -213,11 +213,14 @@ const retrieveEncryptedPrivateKey = (account) => {
   // Fetch shared files for the current account
   const getSharedFiles = async () => {
     try {
+      console.log("Fetching shared files for account:", account);
       const files = await contract.methods.getSharedFiles().call({ from: account });
-      console.log("shared files", files);
+      console.log("Fetched shared files:", files);
       setSharedFiles(files);
+      return files;
     } catch (error) {
       console.error("Error fetching shared files:", error);
+      throw error;
     }
   };
 
@@ -268,8 +271,10 @@ const retrieveEncryptedPrivateKey = (account) => {
     try {
       await contract.methods.deleteFile(cid).send({ from: account });
       getFileCids(account);
+      return { success: true, message: "File deleted successfully!" };
     } catch (error) {
       console.error("Error deleting file:", error);
+      return { success: false, message: error.message || "Failed to delete file. Please try again." };
     }
   };
 
@@ -308,13 +313,11 @@ const retrieveEncryptedPrivateKey = (account) => {
   // Upload a file
   const uploadFile = async (file, onUploadProgress) => {
     if (!file) {
-        alert("Please select a file first!");
-        return { success: false };
+        return { success: false, message: "Please select a file first!" };
     }
 
     if (!walletConnected || !account || !privateKey) {
-        alert("Please connect your wallet first!");
-        return { success: false };
+        return { success: false, message: "Please connect your wallet first!" };
     }
 
     try {
@@ -422,35 +425,59 @@ const retrieveEncryptedPrivateKey = (account) => {
             getFileCids(account);
             console.log("Uploaded files after upload:", uploadedFiles);
 
-            alert("File uploaded successfully!");
-            return { success: true, cid: fileCID };
+            return { success: true, message: "File uploaded successfully!", cid: fileCID };
         } else {
             throw new Error("Failed to upload to IPFS");
         }
     } catch (error) {
         console.error("Error uploading file:", error);
-        alert(error.message || "Failed to upload file.");
-        return { success: false };
+        return { success: false, message: error.message || "Failed to upload file. Please try again." };
     } 
 };
   
 
   // Share a file with another user
-  const shareFile = async (cid, fileName, fileType,fileSize, recipientAddress) => {
-    if (!cid || !fileName || !fileType||!fileSize ||!recipientAddress) {
-      console.log(recipientAddress);
-      console.log(cid);
-      console.log(fileSize);
-      alert("Invalid input!");
-      return;
-    }
-     try{
-      const recipientPublicKey = await fetchPublicKey(recipientAddress);
-      if (!recipientPublicKey) {
-        alert("Recipient's public key not found. Ask them to set it first.");
-        return;
+  const shareFile = async (cid, fileName, fileType, fileSize, recipientAddress) => {
+    try {
+      // Validate inputs
+      if (!cid|| !recipientAddress) {
+        console.log("Validation failed:", { cid, fileName, fileType, fileSize, recipientAddress });
+        return { 
+          success: false, 
+          message: "Invalid input! Please check all fields." 
+        };
       }
 
+      // Validate and convert to checksum address
+      let checksumAddress;
+      try {
+        checksumAddress = ethers.getAddress(recipientAddress);
+      } catch (error) {
+        console.error("Address validation error:", error);
+        return {
+          success: false,
+          message: "Invalid Ethereum address format. Please enter a valid address."
+        };
+      }
+
+      // Check if recipient address is the same as sender
+      if (checksumAddress.toLowerCase() === account.toLowerCase()) {
+        return { 
+          success: false, 
+          message: "Cannot share file with yourself." 
+        };
+      }
+
+      // Get recipient's public key
+      const recipientPublicKey = await fetchPublicKey(checksumAddress);
+      if (!recipientPublicKey) {
+        return { 
+          success: false, 
+          message: "Recipient's public key not found. Ask them to set it first." 
+        };
+      }
+
+      // Get the encrypted AES key
       const encryptedAESKeyHex = await contract.methods.getEncryptedAESKey(cid).call({ from: account });
       const encryptedAESKeyBuffer = Buffer.from(encryptedAESKeyHex, "hex");
 
@@ -466,13 +493,18 @@ const retrieveEncryptedPrivateKey = (account) => {
       );
       
       if (!decryptedAESKey) {
-          throw new Error("Failed to decrypt the AES key");
+          throw new Error("Failed to decrypt the AES key. Please check your keys.");
       }
       
       const shareNonce = window.crypto.getRandomValues(new Uint8Array(nacl.box.nonceLength));
       
-      const recipientPublicKeyBytes = new Uint8Array(Buffer.from(recipientPublicKey.replace("0x", ""), "hex"));
+      // Clean and convert recipient's public key
+      const cleanRecipientPublicKey = recipientPublicKey.toLowerCase().startsWith('0x') 
+        ? recipientPublicKey.slice(2) 
+        : recipientPublicKey;
+      const recipientPublicKeyBytes = new Uint8Array(Buffer.from(cleanRecipientPublicKey, "hex"));
       
+      // Re-encrypt the AES key for the recipient
       const reEncryptedAESKey = nacl.box(
           decryptedAESKey,
           shareNonce,
@@ -480,39 +512,47 @@ const retrieveEncryptedPrivateKey = (account) => {
           privateKey
       );
       
+      if (!reEncryptedAESKey) {
+        throw new Error("Failed to re-encrypt the AES key for recipient.");
+      }
+
       // Combine nonce and re-encrypted key
       const combinedReEncryptedKey = new Uint8Array(shareNonce.length + reEncryptedAESKey.length);
       combinedReEncryptedKey.set(shareNonce, 0);
       combinedReEncryptedKey.set(reEncryptedAESKey, shareNonce.length);
 
+      // Share the file through the smart contract
       await contract.methods.shareFile(
-                    cid, 
-                    fileName, 
-                    fileType, 
-                    fileSize,
-                    recipientAddress, 
-                    "0x" + Buffer.from(combinedReEncryptedKey).toString("hex")
-                ) .send({ 
-                    from: account,
-                });
-      alert("File shared successfully!"); 
-      return { success: true };
-      } catch (error) {
-        alert("Error sharing file: " + error.message);
-        return { success: false };
-  }
-};
+        cid, 
+        fileName, 
+        fileType, 
+        fileSize,
+        checksumAddress, 
+        "0x" + Buffer.from(combinedReEncryptedKey).toString("hex")
+      ).send({ 
+        from: account,
+      });
+
+      return { success: true, message: "File shared successfully!" };
+    } catch (error) {
+      console.error("Error sharing file:", error);
+      return { 
+        success: false, 
+        message: error.message || "Failed to share file. Please try again." 
+      };
+    }
+  };
 
   // Revoke access to a shared file
   const revokeAccess = async (cid, recipient) => {
     console.log("in App");
     try {
       await contract.methods.revokeAccess(cid, recipient).send({ from: account });
-      alert("Access revoked successfully!");
       getSharedFiles();
+      return { success: true, message: "Access revoked successfully!" };
     } catch (error) {
       console.error("Error revoking access:", error);
-      alert("Failed to revoke access.");
+      return { success: false, message: error.message || "Failed to revoke access. Please try again." };
     }
   };
 

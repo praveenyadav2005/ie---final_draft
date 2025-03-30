@@ -11,6 +11,7 @@ import {
   createHashRouter,
   createRoutesFromElements,
   Route,
+  Navigate
 } from 'react-router-dom';
 
 const router = createHashRouter(
@@ -20,6 +21,8 @@ const router = createHashRouter(
       <Route path='learnMore' element={<LearnMore />} /> 
       <Route path='dashboard' element={<Dashboard />} />
       <Route path='passphrase-entry' element={<PassphraseEntry />} />
+      {/* Catch all route - redirect to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Route>
   )
 );
