@@ -238,21 +238,11 @@ function FileList({ files }) {
               onClick={() => handleFileClick(file)}
               className="p-4 bg-gray-800 hover:bg-gray-700 duration-150 rounded-lg shadow-md cursor-pointer"
             >
-              {file.fileType.startsWith('image/') ? (
-                <img
-                  src={`${ipfsGateways[0]}${file.cid}`}
-                  alt={file.fileName}
-                  className="w-full h-32 object-cover rounded-md"
-                  onError={(e) => {
-                    e.target.onerror = null; // Prevent infinite loop
-                    e.target.src = `${ipfsGateways[1]}${file.cid}`; // Try next gateway
-                  }}
-                />
-              ) : (
+              
                 <div className="flex items-center justify-center h-32 bg-gray-700 rounded-md">
-                  <span className="text-gray-400">No Preview</span>
+                  <span className="text-gray-400">No Preview <br/> (due to encrypted) </span>
                 </div>
-              )}
+              
 
               <h3 className="text-lg font-bold truncate mt-2">{file.fileName}</h3>
               <p className="text-sm">File size: {(Number(file.fileSize) / 1024).toFixed(2)} KB</p>
