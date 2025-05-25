@@ -76,7 +76,7 @@ export default function LearnMore() {
 
       {/* Architecture Section with Interactive Diagram */}
       <div className="mt-12 max-w-4xl text-center">
-        <h2 className="text-3xl font-bold mb-4 text-yellow-400">🛠️ Application Architecture</h2>
+        <h2 className="text-3xl font-bold mb-4 text-yellow-400">🛠️ Application flowchart</h2>
         <p className="mt-4 text-lg leading-relaxed text-center max-w-3xl">
         <strong>Frontend:</strong> Built using <strong>React & Tailwind CSS</strong> for a seamless UI.
         <br />
@@ -87,8 +87,8 @@ export default function LearnMore() {
         <strong>Infura API:</strong> Connects the application to Ethereum without running a full node.
       </p>
       <img
-  src="/arch_blue.gif"
-  alt="Placeholder Architecture Diagram"
+  src="/flowchart.png"
+  alt="Placeholder flowchart"
   className="mt-6 w-full "
 />
       </div>
