@@ -58,9 +58,9 @@ node deploy.js
 
 
 
-## 🔗 Architecture
+## 🔗 Flowcart
 
-![Architecture Diagram](./Images/arch2.gif)
+![Architecture Diagram](./Images/flowchart.png)
 
 ## 📜 Smart Contract
 - **Written in Solidity**
